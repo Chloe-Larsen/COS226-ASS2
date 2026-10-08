@@ -6,7 +6,7 @@ public interface Queue<T> {
     //Bounded: blocks if queue is full 
     //LockFree: never blocks
 
-    void deq();
+    T deq();
     //remove and return next item 
     //Bounded: blocks if queue is empty 
     //LockFree: returns null if queue empty
