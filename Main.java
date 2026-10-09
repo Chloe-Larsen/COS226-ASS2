@@ -1,26 +1,82 @@
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
+
 public class Main {
+    public static final boolean DEBUG_LOGS = false;
+    public static final int TOTAL_JOBS = 12000;
+    public static final int QUEUE_CAPACITY = 1000;
 
-    public static boolean DEBUG_LOGS = true; // disable for performance testing
-    public static final int CONSUMER_COUNT = 2;
-    public static final int ITEMS_PER_CONSUMER = 100;
-    public static final int PRODUCER_COUNT = 2;
-    public static final int ITEMS_PER_PRODUCER = 100;
+    public static void main(String[] args) throws InterruptedException {
+        System.out.println("## 4 Producers & 4 Consumers\n| Queue Type | Producer Count | Consumer Count | Time (seconds) | Throughput jobs/s | Produced Count | Processed Count |\n| -------- | ------- | -------- | ------- | -------- | ------- | ------- |");
+        runExperiment("bounded", 4, 4);
+        runExperiment("lockfree", 4, 4);
+        System.out.println();
 
-    public static void main(String[] args) {
+        System.out.println("---\n## 6 Producers & 2 Consumers\n| Queue Type | Producer Count | Consumer Count | Time (seconds) | Throughput jobs/s | Produced Count | Processed Count |\n| -------- | ------- | -------- | ------- | -------- | ------- | ------- |");
+        runExperiment("bounded", 6, 2);
+        runExperiment("lockfree", 6, 2);
+        System.out.println();
 
-        /* ========== EXAMPLE CREATING PRODUCER & CONSUMER THREADS ========== */
+        System.out.println("---\n## 2 Producers & 6 Consumers\n| Queue Type | Producer Count | Consumer Count | Time (seconds) | Throughput jobs/s | Produced Count | Processed Count |\n| -------- | ------- | -------- | ------- | -------- | ------- | ------- |");
+        runExperiment("bounded", 2, 6);
+        runExperiment("lockfree", 2, 6);
+    }
 
-        Queue<Integer> queue = new LockFreeQueue<>();
+    static void runExperiment(String queueType, int producerCount, int consumerCount) throws InterruptedException {
+        if (TOTAL_JOBS % producerCount != 0 || TOTAL_JOBS % consumerCount != 0) {
+            throw new IllegalArgumentException("TOTAL_JOBS must divide evenly");
+        }
 
-        Consumer consumer = new Consumer(queue);
-        Thread consumerThread1 = new Thread(consumer);
-        Thread consumerThread2 = new Thread(consumer);
+        int itemsPerProducer = TOTAL_JOBS / producerCount;
+        int itemsPerConsumer = TOTAL_JOBS / consumerCount;
 
-        Producer producer = new Producer(queue);
-        Thread producerThread1 = new Thread(producer);
-        Thread producerThread2 = new Thread(producer);
+        Queue<Job> queue;
+        if (queueType.equalsIgnoreCase("bounded")) {
+            queue = new BoundedQueue<>(QUEUE_CAPACITY);
+        } else {
+            queue = new LockFreeQueue<>();
+        }
 
-        /* ========== EXAMPLE END ========== */
+        AtomicLong idGenerator = new AtomicLong(0);
+        AtomicInteger producedCount = new AtomicInteger(0);
+        AtomicInteger processedCount = new AtomicInteger(0);
+
+        List<Thread> threads = new ArrayList<>();
+
+        for (int i = 0; i < producerCount; ++i) {
+            threads.add(new Thread(
+                    new Producer(queue, itemsPerProducer, idGenerator, producedCount)));
+        }
+
+        for (int i = 0; i < consumerCount; ++i) {
+            threads.add(new Thread(
+                    new Consumer(queue, itemsPerConsumer, processedCount)));
+        }
+
+        long start = System.nanoTime();
+
+        for (Thread t : threads) {
+            t.start();
+        }
+
+        for (Thread t : threads) {
+            t.join();
+        }
+
+        long elapsedNanos = System.nanoTime() - start;
+        double seconds = elapsedNanos / 1_000_000_000.0;
+        double throughput = TOTAL_JOBS / seconds;
+
+        System.out.printf(
+                "| %-8s | %d | %d | %.3fs | %.1f | %d | %d | %n",
+                queueType, producerCount, consumerCount, seconds, throughput, producedCount.get(),
+                processedCount.get());
+
+        if (producedCount.get() != TOTAL_JOBS || processedCount.get() != TOTAL_JOBS) {
+            throw new AssertionError("Produced/processed count mismatch!");
+        }
     }
 
     public static void log(String message) {
