@@ -1,18 +1,28 @@
+import java.util.concurrent.atomic.AtomicInteger;
+
 public class Consumer implements Runnable {
+    private final Queue<Job> queue;
+    private final int itemsToConsume;
+    private final AtomicInteger processedCount;
 
-    private final Queue<Integer> queue;
-
-    public Consumer(Queue<Integer> queue) {
+    public Consumer(Queue<Job> queue, int itemsToConsume, AtomicInteger processedCount) {
         this.queue = queue;
+        this.itemsToConsume = itemsToConsume;
+        this.processedCount = processedCount;
     }
 
     @Override
     public void run() {
-        long threadId = Thread.currentThread().threadId();
+        int consumed = 0;
+        while (consumed < itemsToConsume) {
+            Job job = queue.deq();
 
-        for (int i = 0; i < Main.ITEMS_PER_CONSUMER; i++) {
-            Integer item = queue.deq(); // can be null
-            Main.log("Consumer " + threadId + " | Dequeued item: " + item);
+            if (job != null) {
+                processedCount.incrementAndGet();
+                consumed++;
+            } else {                
+                Thread.onSpinWait();
+            }
         }
     }
 }

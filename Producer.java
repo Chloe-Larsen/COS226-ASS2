@@ -1,22 +1,26 @@
-import java.util.Random;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 
 public class Producer implements Runnable {
 
-    private final Queue<Integer> queue;
-    private final Random random = new Random();
+    private final Queue<Job> queue;
+    private final int itemsToProduce;
+    private final AtomicLong idGenerator;
+    private final AtomicInteger producedCount;
 
-    public Producer(Queue<Integer> queue) {
+    public Producer(Queue<Job> queue, int itemsToProduce, AtomicLong idGenerator, AtomicInteger producedCount) {
         this.queue = queue;
+        this.itemsToProduce = itemsToProduce;
+        this.idGenerator = idGenerator;
+        this.producedCount = producedCount;
     }
 
     @Override
     public void run() {
-        long threadId = Thread.currentThread().threadId();
-
-        for (int i = 0; i < Main.ITEMS_PER_PRODUCER; i++) {
-            int item = 1 + random.nextInt(1000); // [1; 1000]
-            Main.log("Producer " + threadId + " | Enqueuing item: " + item);
-            queue.enq(item);
+        for (int i = 0; i < itemsToProduce; i++) {
+            Job job = new Job(idGenerator.incrementAndGet());
+            queue.enq(job);
+            producedCount.incrementAndGet();
         }
     }
 }
