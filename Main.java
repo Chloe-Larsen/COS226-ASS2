@@ -1,3 +1,8 @@
+/*
+    Anchen Kruger, u25073703
+    Caleb Jennings, u25173805
+    Chloe Larsen, u25004141
+*/
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;

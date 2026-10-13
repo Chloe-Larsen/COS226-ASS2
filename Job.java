@@ -1,3 +1,8 @@
+/*
+    Anchen Kruger, u25073703
+    Caleb Jennings, u25173805
+    Chloe Larsen, u25004141
+*/
 public final class Job {
     private final long id;
 

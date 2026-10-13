@@ -1,5 +1,10 @@
-import java.util.concurrent.atomic.AtomicReference;
+/*
+    Anchen Kruger, u25073703
+    Caleb Jennings, u25173805
+    Chloe Larsen, u25004141
+*/
 
+import java.util.concurrent.atomic.AtomicReference;
 public class LockFreeQueue<T> implements Queue<T> {
 
     private static class Node<T> {
